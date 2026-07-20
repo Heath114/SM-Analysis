@@ -1,8 +1,19 @@
-# Static single-page site — no build step, just serve the repo root.
+# Netlify build + serverless configuration for PulseBoard.
 [build]
-  publish = "."
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
 
-# SPA-style fallback so any path resolves to the app.
+[functions]
+  node_bundler = "esbuild"
+
+# SPA fallback — let the React router handle client-side routes,
+# but never swallow the serverless function paths.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

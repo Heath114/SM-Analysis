@@ -1,0 +1,40 @@
+import type { Platform } from "./types";
+
+export const PLATFORM_ORDER: Platform[] = ["facebook", "instagram", "tiktok"];
+
+interface PlatformMeta {
+  key: Platform;
+  name: string;
+  color: string;      // css var reference for the data series
+  weak: string;
+  icon: JSX.Element;
+}
+
+const facebookIcon = (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.4v7A10 10 0 0 0 22 12z" />
+  </svg>
+);
+const instagramIcon = (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 2.2c3.2 0 3.6 0 4.9.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.3 1 .4 2.2.1 1.3.1 1.7.1 4.8s0 3.5-.1 4.8c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1 .3-2.2.4-1.3.1-1.7.1-4.9.1s-3.6 0-4.9-.1c-1.2-.1-1.8-.2-2.2-.4a3.9 3.9 0 0 1-1.4-.9 3.9 3.9 0 0 1-.9-1.4c-.2-.4-.3-1-.4-2.2C2.2 15.5 2.2 15.1 2.2 12s0-3.5.1-4.8c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1-.3 2.2-.4C8.4 2.2 8.8 2.2 12 2.2zm0 1.8c-3.1 0-3.5 0-4.7.1-1.1.1-1.7.2-2.1.4-.5.2-.9.4-1.3.8-.4.4-.6.8-.8 1.3-.2.4-.3 1-.4 2.1C2.6 9.9 2.6 10.3 2.6 12s0 2.1.1 3.3c.1 1.1.2 1.7.4 2.1.2.5.4.9.8 1.3.4.4.8.6 1.3.8.4.2 1 .3 2.1.4 1.2.1 1.6.1 4.7.1s3.5 0 4.7-.1c1.1-.1 1.7-.2 2.1-.4.5-.2.9-.4 1.3-.8.4-.4.6-.8.8-1.3.2-.4.3-1 .4-2.1.1-1.2.1-1.6.1-3.3s0-2.1-.1-3.3c-.1-1.1-.2-1.7-.4-2.1a3.5 3.5 0 0 0-.8-1.3 3.5 3.5 0 0 0-1.3-.8c-.4-.2-1-.3-2.1-.4-1.2-.1-1.6-.1-4.7-.1zm0 3.1a4.9 4.9 0 1 1 0 9.8 4.9 4.9 0 0 1 0-9.8zm0 8.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zm6.3-8.3a1.15 1.15 0 1 1-2.3 0 1.15 1.15 0 0 1 2.3 0z" />
+  </svg>
+);
+const tiktokIcon = (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M16.6 5.8a4.3 4.3 0 0 1-1-2.8h-3.1v11.9a2.4 2.4 0 1 1-2.4-2.4c.2 0 .5 0 .7.1v-3.2a5.7 5.7 0 0 0-.7 0 5.6 5.6 0 1 0 5.6 5.6V9.5a7.3 7.3 0 0 0 4.3 1.4V7.7a4.3 4.3 0 0 1-3.4-1.9z" />
+  </svg>
+);
+
+export const PLATFORMS: Record<Platform, PlatformMeta> = {
+  facebook: { key: "facebook", name: "Facebook", color: "var(--fb)", weak: "var(--fb-weak)", icon: facebookIcon },
+  instagram: { key: "instagram", name: "Instagram", color: "var(--ig)", weak: "var(--ig-weak)", icon: instagramIcon },
+  tiktok: { key: "tiktok", name: "TikTok", color: "var(--tt)", weak: "var(--tt-weak)", icon: tiktokIcon },
+};
+
+/** Brand fill for the coloured platform tile in connect rows / badges. */
+export const PLATFORM_FILL: Record<Platform, string> = {
+  facebook: "#1877F2",
+  instagram: "#E1306C",
+  tiktok: "#111114",
+};
