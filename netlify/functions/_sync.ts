@@ -12,6 +12,13 @@ interface Post {
   published_at: string; views: number; likes: number; comments: number; shares: number;
   saves: number; reach: number; avg_watch_seconds: number | null; retention_pct: number | null;
 }
+interface Audience {
+  age: Record<string, number>;
+  gender: Record<string, number>;
+  countries: Record<string, number>;
+  devices: Record<string, number>;
+  active_hours: number[][]; // [7][24]
+}
 
 /** Sync one account: fetch from the platform API and upsert into Supabase.
  *  Throws on failure so the caller can flag the account. */
@@ -36,6 +43,19 @@ export async function syncAccount(db: SupabaseClient, acc: AccountRow): Promise<
       { onConflict: "account_id,external_id" }
     );
   }
+
+  // Audience demographics — best effort, IG + FB expose them (TikTok basic API does not).
+  try {
+    const snap = acc.platform === "instagram" ? await audienceInstagram(acc, token)
+      : acc.platform === "facebook" ? await audienceFacebook(acc, token) : null;
+    if (snap && hasAudience(snap)) {
+      await db.from("audience_snapshots").upsert(
+        { account_id: acc.id, platform: acc.platform, captured_on: today(), ...snap },
+        { onConflict: "account_id,captured_on" }
+      );
+    }
+  } catch { /* audience insights are optional and permission-gated */ }
+
   await db.from("social_accounts").update({ last_synced_at: new Date().toISOString() }).eq("id", acc.id);
 }
 
@@ -69,6 +89,24 @@ async function syncInstagram(acc: AccountRow, token: string) {
   return { metric: { followers: prof.followers_count ?? 0, reach, impressions, views: reach, engagements }, posts };
 }
 
+async function audienceInstagram(acc: AccountRow, token: string): Promise<Audience> {
+  const demo = (breakdown: string) =>
+    getJson(`${GRAPH}/${acc.external_id}/insights?metric=follower_demographics&period=lifetime&timeframe=this_month&breakdown=${breakdown}&metric_type=total&access_token=${token}`)
+      .then((j) => parseDemographics(j)).catch(() => ({}));
+
+  const [ageRaw, genderRaw, countryRaw] = await Promise.all([demo("age"), demo("gender"), demo("country")]);
+  const online = await getJson(`${GRAPH}/${acc.external_id}/insights?metric=online_followers&period=lifetime&access_token=${token}`)
+    .then((j) => bucketOnline(j.data?.[0]?.values ?? [])).catch(() => emptyHeat());
+
+  return {
+    age: toShares(ageRaw),
+    gender: normalizeGender(genderRaw),
+    countries: toShares(mapCountryNames(countryRaw)),
+    devices: {},
+    active_hours: online,
+  };
+}
+
 /* ------------------------------ Facebook --------------------------------- */
 async function syncFacebook(acc: AccountRow, token: string) {
   const prof = await getJson(`${GRAPH}/${acc.external_id}?fields=fan_count,followers_count&access_token=${token}`);
@@ -93,6 +131,30 @@ async function syncFacebook(acc: AccountRow, token: string) {
     retention_pct: null,
   }));
   return { metric: { followers: prof.followers_count ?? prof.fan_count ?? 0, reach: impressions, impressions, views: 0, engagements }, posts };
+}
+
+async function audienceFacebook(acc: AccountRow, token: string): Promise<Audience> {
+  const j = await getJson(`${GRAPH}/${acc.external_id}/insights?metric=page_fans_gender_age,page_fans_country,page_fans_online&period=lifetime&access_token=${token}`).catch(() => ({ data: [] }));
+  const rows = j.data ?? [];
+  const genderAge = latestValue(rows, "page_fans_gender_age") ?? {};
+  const country = latestValue(rows, "page_fans_country") ?? {};
+  const online = rows.find((r: any) => r.name === "page_fans_online")?.values ?? [];
+
+  const age: Record<string, number> = {};
+  const gender: Record<string, number> = {};
+  for (const key of Object.keys(genderAge)) {
+    const [g, a] = key.split("."); // e.g. "F.25-34"
+    if (a) age[a] = (age[a] ?? 0) + genderAge[key];
+    const gk = g === "F" ? "female" : g === "M" ? "male" : "other";
+    gender[gk] = (gender[gk] ?? 0) + genderAge[key];
+  }
+  return {
+    age: toShares(age),
+    gender: toShares(gender),
+    countries: toShares(mapCountryNames(country)),
+    devices: {},
+    active_hours: bucketOnline(online),
+  };
 }
 
 /* ------------------------------- TikTok ---------------------------------- */
@@ -148,4 +210,65 @@ function normInsights(rows: any[]): Record<string, number> {
   const out: Record<string, number> = {};
   for (const r of rows) out[r.name] = r.values?.[0]?.value ?? 0;
   return out;
+}
+/** Newer IG follower_demographics: data[0].total_value.breakdowns[0].results[]. */
+function parseDemographics(j: any): Record<string, number> {
+  const out: Record<string, number> = {};
+  const breakdowns = j.data?.[0]?.total_value?.breakdowns ?? [];
+  for (const b of breakdowns) {
+    for (const r of b.results ?? []) {
+      const key = (r.dimension_values ?? []).join(" · ");
+      if (key) out[key] = (out[key] ?? 0) + (r.value ?? 0);
+    }
+  }
+  return out;
+}
+function latestValue(rows: any[], name: string): Record<string, number> | null {
+  const row = rows.find((r) => r.name === name);
+  const values = row?.values ?? [];
+  return values.length ? values[values.length - 1].value : null;
+}
+/** Bucket hourly online-followers values into a [7][24] weekday × hour grid. */
+function bucketOnline(values: any[]): number[][] {
+  const heat = emptyHeat();
+  for (const entry of values) {
+    const map = entry?.value;
+    if (!map || typeof map !== "object") continue;
+    const wd = entry.end_time ? new Date(entry.end_time).getUTCDay() : 0;
+    for (let h = 0; h < 24; h++) heat[wd][h] += Number(map[h] ?? map[String(h)] ?? 0);
+  }
+  return heat;
+}
+function emptyHeat(): number[][] {
+  return Array.from({ length: 7 }, () => Array(24).fill(0));
+}
+function toShares(obj: Record<string, number>): Record<string, number> {
+  const total = Object.values(obj).reduce((s, v) => s + v, 0);
+  if (!total) return {};
+  const out: Record<string, number> = {};
+  for (const k of Object.keys(obj)) out[k] = obj[k] / total;
+  return out;
+}
+function normalizeGender(raw: Record<string, number>): Record<string, number> {
+  const mapped: Record<string, number> = {};
+  for (const k of Object.keys(raw)) {
+    const key = /^f/i.test(k) ? "female" : /^m/i.test(k) ? "male" : "other";
+    mapped[key] = (mapped[key] ?? 0) + raw[k];
+  }
+  return toShares(mapped);
+}
+const COUNTRY_NAMES: Record<string, string> = {
+  US: "United States", GB: "United Kingdom", BR: "Brazil", DE: "Germany", FR: "France",
+  IN: "India", ID: "Indonesia", EG: "Egypt", SA: "Saudi Arabia", AE: "UAE", CA: "Canada",
+  AU: "Australia", ES: "Spain", IT: "Italy", MX: "Mexico", NG: "Nigeria", TR: "Türkiye",
+  JP: "Japan", PH: "Philippines", PK: "Pakistan", NL: "Netherlands", RU: "Russia",
+};
+function mapCountryNames(raw: Record<string, number>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const k of Object.keys(raw)) out[COUNTRY_NAMES[k] ?? k] = raw[k];
+  return out;
+}
+function hasAudience(a: Audience): boolean {
+  return Object.keys(a.age).length > 0 || Object.keys(a.gender).length > 0 ||
+    Object.keys(a.countries).length > 0 || a.active_hours.some((r) => r.some((v) => v > 0));
 }

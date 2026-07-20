@@ -60,12 +60,6 @@ export async function triggerSync(): Promise<{ ok: boolean; message: string }> {
   return { ok: res.ok, message: body.message ?? (res.ok ? "Sync started." : "Sync failed.") };
 }
 
-/** Builds the OAuth start URL for connecting a platform. */
-export function connectUrl(platform: Platform, accessToken: string): string {
-  const params = new URLSearchParams({ token: accessToken });
-  return `/api/oauth-${platform === "instagram" ? "meta" : platform}?${params.toString()}`;
-}
-
 /* ----------------------------- aggregation ------------------------------- */
 
 export type MetricKey = "followers" | "reach" | "impressions" | "views" | "engagements";

@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useDash } from "../context/DashboardContext";
 import { PLATFORMS } from "../lib/platforms";
-import { initials, compact, pctPlain } from "../lib/format";
+import { initials } from "../lib/format";
 import { seriesByDay, sum } from "../lib/api";
 import ThemeToggle from "./ThemeToggle";
 import {
