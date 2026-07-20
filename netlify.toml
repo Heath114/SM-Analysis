@@ -1,0 +1,9 @@
+# Static single-page site — no build step, just serve the repo root.
+[build]
+  publish = "."
+
+# SPA-style fallback so any path resolves to the app.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
