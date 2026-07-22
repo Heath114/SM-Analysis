@@ -121,7 +121,11 @@ netlify/functions/
 supabase/schema.sql  tables (+ goals, report_shares) + row-level security
 ```
 
-## Notes & roadmap
-- **Audience snapshots** (age/gender/country/best-time) have a table and UI ready; wiring the IG/FB Audience Insights endpoints into the sync is the next backend step.
+## Notes & behaviour
+- **Historical backfill.** On an account's first sync, PulseBoard pulls up to the last **30 days** of daily history so charts show real trends immediately (not just from today onward). Later syncs only fetch the gap since the last stored day.
+  - *Facebook* backfills followers (`page_fans`), reach/impressions and engagements directly from Page insights.
+  - *Instagram* backfills reach/impressions from time-ranged insights and reconstructs the daily followers curve from the current total plus daily `follower_count` deltas; engagements use `total_interactions` where the account exposes it.
+  - *TikTok* has no daily-history API, so it records the current day only and its trend builds up over time.
+- **Audience** (age/gender/country + weekday×hour best-time heatmap) syncs from IG `follower_demographics` and FB `page_fans_*`. TikTok exposes no demographics.
 - Graph API metric names evolve — the sync stores whatever a call returns and fails softly per account, flagging accounts whose token expired so the UI can prompt a reconnect.
 - Tokens are encrypted at rest by Supabase and never leave the backend.
