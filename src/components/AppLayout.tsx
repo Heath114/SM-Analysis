@@ -4,11 +4,12 @@ import { useAuth } from "../context/AuthContext";
 import { useDash } from "../context/DashboardContext";
 import { PLATFORMS } from "../lib/platforms";
 import { initials } from "../lib/format";
-import { seriesByDay, sum } from "../lib/api";
 import ThemeToggle from "./ThemeToggle";
+import CommandPalette from "./CommandPalette";
+import { exportCsv } from "../lib/reports";
 import {
   IcOverview, IcContent, IcAudience, IcPlatforms, IcLink,
-  IcDownload, IcRefresh, IcChevron, IcLogout,
+  IcDownload, IcRefresh, IcChevron, IcLogout, IcSearch, IcCalendar, IcMessage, IcFile,
 } from "../lib/icons";
 import type { Range, Scope } from "../lib/types";
 
@@ -17,10 +18,14 @@ const NAV = [
   { to: "/content", label: "Content", Icon: IcContent, end: false },
   { to: "/audience", label: "Audience", Icon: IcAudience, end: false },
   { to: "/platforms", label: "Platforms", Icon: IcPlatforms, end: false },
+  { to: "/planner", label: "Planner", Icon: IcCalendar, end: false },
+  { to: "/assistant", label: "Assistant", Icon: IcMessage, end: false },
+  { to: "/reports", label: "Reports", Icon: IcFile, end: false },
 ];
 const TITLES: Record<string, string> = {
   "/": "Overview", "/content": "Content", "/audience": "Audience",
-  "/platforms": "Platforms", "/connections": "Connections",
+  "/platforms": "Platforms", "/planner": "Planner", "/assistant": "Assistant",
+  "/reports": "Reports", "/connections": "Connections",
 };
 
 export default function AppLayout() {
@@ -35,33 +40,6 @@ export default function AppLayout() {
   const title = TITLES[loc.pathname] ?? "Overview";
 
   const scopeLabel = dash.scope === "all" ? "All platforms" : PLATFORMS[dash.scope].name;
-
-  function exportCsv() {
-    const rows: string[] = [];
-    rows.push("PulseBoard export");
-    rows.push(`Window,${dash.range} days`);
-    rows.push(`Scope,${scopeLabel}`);
-    rows.push("");
-    rows.push("Platform,Followers,Reach,Views,Engagements");
-    for (const p of dash.connectedPlatforms) {
-      const foll = seriesByDay(dash.metrics, p, "followers");
-      const reach = sum(seriesByDay(dash.metrics, p, "reach"));
-      const views = sum(seriesByDay(dash.metrics, p, "views"));
-      const eng = sum(seriesByDay(dash.metrics, p, "engagements"));
-      rows.push(`${PLATFORMS[p].name},${foll[foll.length - 1]?.value ?? 0},${reach},${views},${eng}`);
-    }
-    rows.push("");
-    rows.push("Content,Platform,Views,Likes,Comments,Shares,Saves");
-    for (const c of dash.content.slice(0, 50)) {
-      rows.push(`"${c.title.replace(/"/g, "'")}",${PLATFORMS[c.platform].name},${c.views},${c.likes},${c.comments},${c.shares},${c.saves}`);
-    }
-    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "pulseboard-export.csv";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
 
   return (
     <div className="shell">
@@ -109,6 +87,9 @@ export default function AppLayout() {
       <div className="main">
         <header className="topbar">
           <h1>{title}</h1>
+          <button className="searchbtn" onClick={() => window.dispatchEvent(new Event("pb-open-cmdk"))} aria-label="Open command palette">
+            <IcSearch /> <span className="sb-label">Search</span> <kbd>⌘K</kbd>
+          </button>
           <div className="spacer" />
 
           <div className="seg" role="group" aria-label="Date range">
@@ -142,7 +123,7 @@ export default function AppLayout() {
           <button className="btn btn--sm" onClick={() => dash.sync()} disabled={dash.syncing || dash.connectedPlatforms.length === 0}>
             <IcRefresh className={dash.syncing ? "spin" : ""} /> {dash.syncing ? "Syncing" : "Sync"}
           </button>
-          <button className="iconbtn" title="Export CSV" onClick={exportCsv} disabled={!dash.hasData}><IcDownload /></button>
+          <button className="iconbtn" title="Export CSV" onClick={() => exportCsv(dash)} disabled={!dash.hasData}><IcDownload /></button>
           <ThemeToggle />
         </header>
 
@@ -152,6 +133,8 @@ export default function AppLayout() {
           </div>
         </main>
       </div>
+
+      <CommandPalette />
     </div>
   );
 }

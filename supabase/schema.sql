@@ -131,6 +131,38 @@ drop policy if exists "audience owner read" on public.audience_snapshots;
 create policy "audience owner read" on public.audience_snapshots
   for select using (public.owns_account(account_id));
 
+-- ---- goals (user-set targets) ---------------------------------------------
+create table if not exists public.goals (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users on delete cascade,
+  metric text not null check (metric in ('followers','reach','views','engagements')),
+  scope text not null default 'all',   -- 'all' or a platform id
+  target bigint not null check (target > 0),
+  due_date date,
+  created_at timestamptz not null default now()
+);
+alter table public.goals enable row level security;
+drop policy if exists "goals owner all" on public.goals;
+create policy "goals owner all" on public.goals
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ---- report_shares (public read-only report links) -----------------------
+-- The payload is a self-contained snapshot (no tokens, no raw rows). There is
+-- deliberately NO anon select policy: the public /r/:slug page reads through a
+-- Netlify function using the service-role key, so owners keep full control.
+create table if not exists public.report_shares (
+  slug text primary key,
+  user_id uuid not null references auth.users on delete cascade,
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+alter table public.report_shares enable row level security;
+drop policy if exists "shares owner all" on public.report_shares;
+create policy "shares owner all" on public.report_shares
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 -- helpful indexes
 create index if not exists idx_metrics_account_date on public.metrics_daily (account_id, date);
 create index if not exists idx_content_account_views on public.content (account_id, views desc);
+create index if not exists idx_goals_user on public.goals (user_id);
+create index if not exists idx_shares_user on public.report_shares (user_id);

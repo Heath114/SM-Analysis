@@ -67,3 +67,30 @@ export const IcInbox = (p: SVGProps<SVGSVGElement>) => (
 export const IcClock = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
 );
+export const IcSearch = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+);
+export const IcCommand = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M15 6a3 3 0 1 1 3 3h-3zM9 6a3 3 0 1 0-3 3h3zM9 18a3 3 0 1 1-3-3h3zM15 18a3 3 0 1 0 3-3h-3zM9 9h6v6H9z" /></svg>
+);
+export const IcTarget = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.4" /></svg>
+);
+export const IcMessage = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M21 12a8 8 0 0 1-11.5 7.2L3 21l1.8-6.5A8 8 0 1 1 21 12z" /></svg>
+);
+export const IcCalendar = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><rect x="3" y="4.5" width="18" height="16.5" rx="2" /><path d="M3 9h18M8 2.5v4M16 2.5v4" /></svg>
+);
+export const IcSend = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
+);
+export const IcFile = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6" /></svg>
+);
+export const IcArrowRight = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+);
+export const IcCornerReturn = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M9 10 5 14l4 4M5 14h11a3 3 0 0 0 3-3V6" /></svg>
+);

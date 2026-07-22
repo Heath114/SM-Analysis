@@ -1,25 +1,20 @@
 import { useEffect, useState } from "react";
 import { IcSun, IcMoon } from "../lib/icons";
-
-type Theme = "light" | "dark";
-
-function current(): Theme {
-  const stored = localStorage.getItem("pb-theme") as Theme | null;
-  if (stored) return stored;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
+import { getTheme, toggleTheme, type Theme } from "../lib/theme";
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(current);
+  const [theme, setTheme] = useState<Theme>(getTheme);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("pb-theme", theme);
+    const onChange = (e: Event) => setTheme((e as CustomEvent<Theme>).detail);
+    window.addEventListener("pb-theme", onChange);
+    return () => window.removeEventListener("pb-theme", onChange);
   }, [theme]);
 
   return (
-    <button className="iconbtn" title="Toggle theme" aria-label="Toggle colour theme"
-      onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}>
+    <button className="iconbtn" title="Toggle theme (⌘K)" aria-label="Toggle colour theme"
+      onClick={() => setTheme(toggleTheme())}>
       {theme === "dark" ? <IcSun /> : <IcMoon />}
     </button>
   );

@@ -55,5 +55,16 @@ export interface AudienceSnapshot {
   active_hours: number[][];       // [7][24] activity intensity
 }
 
+export type GoalMetric = "followers" | "reach" | "views" | "engagements";
+export interface Goal {
+  id: string;
+  user_id: string;
+  metric: GoalMetric;
+  scope: Scope;         // "all" or a specific platform
+  target: number;
+  due_date: string | null;
+  created_at: string;
+}
+
 export type Range = 7 | 30 | 90;
 export type Scope = "all" | Platform;

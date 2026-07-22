@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 import type {
-  SocialAccount, MetricPoint, ContentItem, AudienceSnapshot, Platform, Range, Scope,
+  SocialAccount, MetricPoint, ContentItem, AudienceSnapshot, Platform, Range, Scope, Goal,
 } from "./types";
 
 /** ISO date (YYYY-MM-DD) `days` before today, UTC. */
@@ -48,6 +48,58 @@ export async function fetchAudience(): Promise<AudienceSnapshot[]> {
   return (data ?? []) as AudienceSnapshot[];
 }
 
+/* -------------------------------- goals ---------------------------------- */
+
+export async function fetchGoals(): Promise<Goal[]> {
+  const { data, error } = await supabase
+    .from("goals")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Goal[];
+}
+
+export async function createGoal(g: Pick<Goal, "metric" | "scope" | "target" | "due_date">): Promise<Goal> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in.");
+  const { data, error } = await supabase
+    .from("goals")
+    .insert({ ...g, user_id: user.id })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as Goal;
+}
+
+export async function deleteGoal(id: string): Promise<void> {
+  const { error } = await supabase.from("goals").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/* ----------------------------- share links ------------------------------ */
+
+/** Persist a report snapshot server-side and get a public read-only URL. */
+export async function createShare(snapshot: unknown): Promise<{ slug: string; url: string }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not signed in.");
+  const res = await fetch("/api/share", {
+    method: "POST",
+    headers: { "content-type": "application/json", Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ snapshot }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.message || "Could not create a share link.");
+  return body as { slug: string; url: string };
+}
+
+/** Fetch a shared snapshot by slug — no auth (served via service role). */
+export async function fetchShare(slug: string): Promise<unknown> {
+  const res = await fetch(`/api/share?slug=${encodeURIComponent(slug)}`);
+  if (!res.ok) throw new Error("This report link is invalid or has been removed.");
+  const body = await res.json();
+  return body.snapshot;
+}
+
 /** Kicks off a server-side sync (Netlify function) for the signed-in user. */
 export async function triggerSync(): Promise<{ ok: boolean; message: string }> {
   const { data: { session } } = await supabase.auth.getSession();
@@ -58,6 +110,23 @@ export async function triggerSync(): Promise<{ ok: boolean; message: string }> {
   });
   const body = await res.json().catch(() => ({}));
   return { ok: res.ok, message: body.message ?? (res.ok ? "Sync started." : "Sync failed.") };
+}
+
+/** Ask the grounded AI assistant a question about the (real) dashboard data. */
+export async function askAI(
+  summary: string,
+  messages: { role: "user" | "assistant"; content: string }[]
+): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not signed in.");
+  const res = await fetch("/api/ai", {
+    method: "POST",
+    headers: { "content-type": "application/json", Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ summary, messages }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.message || "The assistant is unavailable.");
+  return body.answer as string;
 }
 
 /* ----------------------------- aggregation ------------------------------- */

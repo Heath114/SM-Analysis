@@ -8,7 +8,11 @@ import Overview from "./pages/Overview";
 import Content from "./pages/Content";
 import Audience from "./pages/Audience";
 import Platforms from "./pages/Platforms";
+import Planner from "./pages/Planner";
+import Assistant from "./pages/Assistant";
+import Reports from "./pages/Reports";
 import Connections from "./pages/Connections";
+import SharedReport from "./pages/SharedReport";
 
 function Splash() {
   return (
@@ -33,6 +37,9 @@ function Gate() {
           <Route path="content" element={<Content />} />
           <Route path="audience" element={<Audience />} />
           <Route path="platforms" element={<Platforms />} />
+          <Route path="planner" element={<Planner />} />
+          <Route path="assistant" element={<Assistant />} />
+          <Route path="reports" element={<Reports />} />
           <Route path="connections" element={<Connections />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
@@ -46,7 +53,10 @@ export default function App() {
     <ToastProvider>
       <AuthProvider>
         <BrowserRouter>
-          <Gate />
+          <Routes>
+            <Route path="/r/:slug" element={<SharedReport />} />
+            <Route path="/*" element={<Gate />} />
+          </Routes>
         </BrowserRouter>
       </AuthProvider>
     </ToastProvider>

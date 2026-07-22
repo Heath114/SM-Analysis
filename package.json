@@ -12,6 +12,7 @@
     "typecheck:functions": "tsc -p tsconfig.functions.json"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.112.5",
     "@fontsource-variable/inter": "^5.1.1",
     "@supabase/supabase-js": "^2.45.4",
     "date-fns": "^3.6.0",

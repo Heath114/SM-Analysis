@@ -66,6 +66,7 @@ Copy `.env.example` → `.env.local` for local dev, and set the same keys in
 | `META_APP_ID` / `META_APP_SECRET` | backend | Meta app |
 | `TIKTOK_CLIENT_KEY` / `TIKTOK_CLIENT_SECRET` | backend | TikTok app |
 | `OAUTH_STATE_SECRET` | backend | any long random string |
+| `ANTHROPIC_API_KEY` | backend | **secret** — powers the AI Assistant (`/api/ai`). Optional: leave unset and the Assistant shows a "not configured" message; everything else works. Get one at [console.anthropic.com](https://console.anthropic.com). |
 
 ### 5. Deploy
 The repo is already wired for Netlify (`netlify.toml`). In Netlify: **Add new site → Import from Git → this repo**. Build command `npm run build`, publish `dist`, functions auto-detected in `netlify/functions`. Set the env vars above, then deploy.
@@ -91,21 +92,33 @@ npx netlify dev
 2. **Connections** → connect Facebook, Instagram, TikTok via OAuth.
 3. Hit **Sync** (or wait for the daily cron) to pull metrics.
 4. Explore **Overview / Content / Audience / Platforms**, filter by date range and platform, export CSV.
+5. **Planner** — best time to post (from audience-activity), anomaly alerts, and growth **goals** with live progress.
+6. **Assistant** — an AI chat that reads your real numbers and answers "why did reach drop?" / "what should I post next?" (needs `ANTHROPIC_API_KEY`).
+7. **Reports** — a print-ready PDF report, CSV export, and a **read-only share link** (`/r/<slug>`) anyone can open without an account.
+8. Press **⌘K / Ctrl+K** anywhere for the command palette (navigate, sync, export, set range/scope, jump to a post).
+
+## Feature surface
+- **Everything runs on real, synced data** — features show empty states until a platform is connected and approved. No mock numbers, anywhere.
+- **AI Assistant** is grounded: the browser computes a compact, numbers-only snapshot of your dashboard and sends it to `/api/ai`; Claude answers only from that snapshot (no fabrication, no raw rows or tokens leave the browser).
+- **Share links** store a self-contained snapshot in `report_shares` (no tokens, no raw metric rows). The public page reads it through `/api/share` using the service-role key, so there is no anon table access.
 
 ## Project structure
 ```
 src/
-  components/      UI + charts (LineChart, Sparkline, BarList, StatCard, …)
+  components/      UI + charts (LineChart, Sparkline, BarList, StatCard, ReportSheet, CommandPalette, ShareButton, …)
   context/         Auth, Dashboard (data + range/scope), Toast
-  lib/             supabase client, api (queries + aggregation), types, format, icons
-  pages/           Auth, Overview, Content, Audience, Platforms, Connections
+  lib/             supabase client, api (queries + aggregation), analytics (best-time/alerts/goals/AI summary),
+                   snapshot (report builder), reports (CSV), theme, types, format, icons
+  pages/           Auth, Overview, Content, Audience, Platforms, Planner, Assistant, Reports, Connections, SharedReport
 netlify/functions/
   oauth-meta*.ts   Facebook + Instagram OAuth
   oauth-tiktok*.ts TikTok OAuth
   sync.ts          on-demand sync (per user)
   sync-cron.ts     scheduled daily sync (all users)
+  ai.ts            grounded AI assistant (Claude)
+  share.ts         create + read public report share links
   _lib.ts / _sync.ts  shared helpers
-supabase/schema.sql  tables + row-level security
+supabase/schema.sql  tables (+ goals, report_shares) + row-level security
 ```
 
 ## Notes & roadmap
