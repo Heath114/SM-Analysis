@@ -15,5 +15,8 @@ if (!isConfigured) {
 }
 
 export const supabase = createClient(url || "http://localhost", anon || "public-anon-key", {
+  // All PulseBoard tables live in their own `pulseboard` schema so the project
+  // can be shared with other apps. (Expose it in Supabase -> Settings -> API.)
+  db: { schema: "pulseboard" },
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 });

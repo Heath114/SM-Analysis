@@ -17,12 +17,16 @@ export const env = {
   STATE_SECRET: process.env.OAUTH_STATE_SECRET ?? "dev-insecure-secret",
 };
 
+/** A Supabase client typed to accept any schema (we use `pulseboard`). */
+export type Db = SupabaseClient<any, any, any>;
+
 /** Service-role Supabase client — bypasses RLS. NEVER expose to the browser. */
-export function admin(): SupabaseClient {
+export function admin(): Db {
   if (!env.SUPABASE_URL || !env.SERVICE_ROLE) {
     throw new Error("Supabase service credentials are not configured.");
   }
   return createClient(env.SUPABASE_URL, env.SERVICE_ROLE, {
+    db: { schema: "pulseboard" }, // PulseBoard tables live in their own schema
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
@@ -67,7 +71,7 @@ export function backToApp(result: string, value: string) {
 
 /** Upsert a connected account and stash its secret token (service-role only). */
 export async function saveAccount(
-  db: SupabaseClient,
+  db: Db,
   userId: string,
   a: { platform: string; external_id: string; username: string; display_name?: string | null; avatar_url?: string | null },
   secret: { access_token: string; refresh_token?: string | null; expires_at?: string | null; extra?: Record<string, unknown> }

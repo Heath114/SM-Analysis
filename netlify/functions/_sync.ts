@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Db } from "./_lib";
 
 const GRAPH = "https://graph.facebook.com/v19.0";
 export const today = () => new Date().toISOString().slice(0, 10);
@@ -22,7 +22,7 @@ interface Audience {
 
 /** Sync one account: fetch from the platform API and upsert into Supabase.
  *  Throws on failure so the caller can flag the account. */
-export async function syncAccount(db: SupabaseClient, acc: AccountRow): Promise<void> {
+export async function syncAccount(db: Db, acc: AccountRow): Promise<void> {
   const { data: secretRow } = await db.from("account_secrets").select("access_token,extra").eq("account_id", acc.id).single();
   const token = secretRow?.access_token as string | undefined;
   if (!token) throw new Error("missing token");
