@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDash } from "../context/DashboardContext";
+import { useDemo } from "../context/DemoContext";
 import { useToast } from "../context/ToastContext";
 import { supabase, isConfigured } from "../lib/supabase";
 import { PLATFORMS, PLATFORM_ORDER, PLATFORM_FILL } from "../lib/platforms";
@@ -10,6 +11,7 @@ import type { Platform } from "../lib/types";
 
 export default function Connections() {
   const dash = useDash();
+  const { demo } = useDemo();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const [connecting, setConnecting] = useState<Platform | null>(null);
@@ -25,6 +27,7 @@ export default function Connections() {
   }, []);
 
   async function connect(platform: Platform) {
+    if (demo) { toast("This is a preview. Real accounts connect here once the app is set up."); return; }
     if (!isConfigured) { toast("Configure Supabase first (see README)."); return; }
     setConnecting(platform);
     const { data: { session } } = await supabase.auth.getSession();
@@ -35,6 +38,7 @@ export default function Connections() {
   }
 
   async function disconnect(id: string, name: string) {
+    if (demo) { toast("Preview mode: disconnecting is disabled."); return; }
     if (!confirm(`Disconnect ${name}? Historical data is kept; syncing stops.`)) return;
     const { error } = await supabase.from("social_accounts").update({ status: "revoked" }).eq("id", id);
     if (error) toast(error.message);

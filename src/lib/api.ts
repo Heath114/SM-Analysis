@@ -2,6 +2,10 @@ import { supabase } from "./supabase";
 import type {
   SocialAccount, MetricPoint, ContentItem, AudienceSnapshot, Platform, Range, Scope, Goal,
 } from "./types";
+import {
+  isDemoMode, demoAccounts, demoMetricsInRange, demoContent, demoAudience,
+  getDemoGoals, createDemoGoal, deleteDemoGoal,
+} from "./demoData";
 
 /** ISO date (YYYY-MM-DD) `days` before today, UTC. */
 function isoDaysAgo(days: number): string {
@@ -11,6 +15,7 @@ function isoDaysAgo(days: number): string {
 }
 
 export async function fetchAccounts(): Promise<SocialAccount[]> {
+  if (isDemoMode()) return demoAccounts;
   const { data, error } = await supabase
     .from("social_accounts")
     .select("*")
@@ -20,6 +25,7 @@ export async function fetchAccounts(): Promise<SocialAccount[]> {
 }
 
 export async function fetchMetrics(range: Range): Promise<MetricPoint[]> {
+  if (isDemoMode()) return demoMetricsInRange(range);
   const { data, error } = await supabase
     .from("metrics_daily")
     .select("account_id,platform,date,followers,reach,impressions,views,engagements")
@@ -30,6 +36,7 @@ export async function fetchMetrics(range: Range): Promise<MetricPoint[]> {
 }
 
 export async function fetchContent(): Promise<ContentItem[]> {
+  if (isDemoMode()) return demoContent;
   const { data, error } = await supabase
     .from("content")
     .select("*")
@@ -40,6 +47,7 @@ export async function fetchContent(): Promise<ContentItem[]> {
 }
 
 export async function fetchAudience(): Promise<AudienceSnapshot[]> {
+  if (isDemoMode()) return demoAudience;
   const { data, error } = await supabase
     .from("audience_snapshots")
     .select("*")
@@ -51,6 +59,7 @@ export async function fetchAudience(): Promise<AudienceSnapshot[]> {
 /* -------------------------------- goals ---------------------------------- */
 
 export async function fetchGoals(): Promise<Goal[]> {
+  if (isDemoMode()) return getDemoGoals();
   const { data, error } = await supabase
     .from("goals")
     .select("*")
@@ -60,6 +69,7 @@ export async function fetchGoals(): Promise<Goal[]> {
 }
 
 export async function createGoal(g: Pick<Goal, "metric" | "scope" | "target" | "due_date">): Promise<Goal> {
+  if (isDemoMode()) return createDemoGoal(g);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not signed in.");
   const { data, error } = await supabase
@@ -72,6 +82,7 @@ export async function createGoal(g: Pick<Goal, "metric" | "scope" | "target" | "
 }
 
 export async function deleteGoal(id: string): Promise<void> {
+  if (isDemoMode()) { deleteDemoGoal(id); return; }
   const { error } = await supabase.from("goals").delete().eq("id", id);
   if (error) throw error;
 }
@@ -80,6 +91,7 @@ export async function deleteGoal(id: string): Promise<void> {
 
 /** Persist a report snapshot server-side and get a public read-only URL. */
 export async function createShare(snapshot: unknown): Promise<{ slug: string; url: string }> {
+  if (isDemoMode()) throw new Error("Share links are disabled in the preview. They work once you sign in with real data.");
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("Not signed in.");
   const res = await fetch("/api/share", {
@@ -102,6 +114,7 @@ export async function fetchShare(slug: string): Promise<unknown> {
 
 /** Kicks off a server-side sync (Netlify function) for the signed-in user. */
 export async function triggerSync(): Promise<{ ok: boolean; message: string }> {
+  if (isDemoMode()) return { ok: false, message: "Preview mode: connect a real account after setup to sync live data." };
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return { ok: false, message: "Not signed in." };
   const res = await fetch("/api/sync", {
@@ -117,6 +130,10 @@ export async function askAI(
   summary: string,
   messages: { role: "user" | "assistant"; content: string }[]
 ): Promise<string> {
+  if (isDemoMode()) {
+    await new Promise((r) => setTimeout(r, 500));
+    return "This is preview mode, so I'm running on sample data rather than a live account. In the real product I read your synced numbers and answer questions like why reach moved, what to post next, and your best posting windows. Connect an account and I'll ground every answer in your actual metrics.";
+  }
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("Not signed in.");
   const res = await fetch("/api/ai", {

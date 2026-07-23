@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
+import { DemoProvider, useDemo } from "./context/DemoContext";
 import { DashboardProvider } from "./context/DashboardContext";
 import AppLayout from "./components/AppLayout";
 import AuthPage from "./pages/AuthPage";
@@ -27,8 +29,12 @@ function Splash() {
 
 function Gate() {
   const { session, loading } = useAuth();
+  const { demo, exit } = useDemo();
+  // A real login always wins over preview mode.
+  useEffect(() => { if (session && demo) exit(); }, [session, demo, exit]);
+
   if (loading) return <Splash />;
-  if (!session) return <AuthPage />;
+  if (!session && !demo) return <AuthPage />;
   return (
     <DashboardProvider>
       <Routes>
@@ -52,12 +58,14 @@ export default function App() {
   return (
     <ToastProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/r/:slug" element={<SharedReport />} />
-            <Route path="/*" element={<Gate />} />
-          </Routes>
-        </BrowserRouter>
+        <DemoProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/r/:slug" element={<SharedReport />} />
+              <Route path="/*" element={<Gate />} />
+            </Routes>
+          </BrowserRouter>
+        </DemoProvider>
       </AuthProvider>
     </ToastProvider>
   );

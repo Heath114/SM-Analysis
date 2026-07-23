@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useDemo } from "../context/DemoContext";
 import { isConfigured } from "../lib/supabase";
 import { IcCheck } from "../lib/icons";
 
@@ -12,6 +13,7 @@ const POINTS = [
 
 export default function AuthPage() {
   const { signIn, signUp } = useAuth();
+  const { enter } = useDemo();
   const [mode, setMode] = useState<"in" | "up">("in");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -86,6 +88,10 @@ export default function AuthPage() {
             {busy ? "Please wait…" : mode === "in" ? "Sign in" : "Create account"}
           </button>
         </form>
+        <div className="auth__or"><span>or</span></div>
+        <button type="button" className="btn btn--block" onClick={enter}>Explore the live demo</button>
+        <p className="auth__demo-note">See the full dashboard with sample data. No account needed.</p>
+
         <div className="auth__switch">
           {mode === "in" ? (
             <>New here? <button onClick={() => { setMode("up"); setErr(null); }}>Create an account</button></>
@@ -93,7 +99,7 @@ export default function AuthPage() {
             <>Already have an account? <button onClick={() => { setMode("in"); setErr(null); }}>Sign in</button></>
           )}
         </div>
-        <p className="auth__note">Your credentials are handled by Supabase Auth. We never see your platform passwords — connections use official OAuth.</p>
+        <p className="auth__note">Your credentials are handled by Supabase Auth. We never see your platform passwords. Connections use official OAuth.</p>
       </div>
     </div>
   );

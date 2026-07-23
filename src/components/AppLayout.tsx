@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useDemo } from "../context/DemoContext";
 import { useDash } from "../context/DashboardContext";
 import { PLATFORMS } from "../lib/platforms";
 import { initials } from "../lib/format";
@@ -9,7 +10,7 @@ import CommandPalette from "./CommandPalette";
 import { exportCsv } from "../lib/reports";
 import {
   IcOverview, IcContent, IcAudience, IcPlatforms, IcLink,
-  IcDownload, IcRefresh, IcChevron, IcLogout, IcSearch, IcCalendar, IcMessage, IcFile,
+  IcDownload, IcRefresh, IcChevron, IcLogout, IcSearch, IcCalendar, IcMessage, IcFile, IcMenu, IcClose,
 } from "../lib/icons";
 import type { Range, Scope } from "../lib/types";
 
@@ -30,35 +31,40 @@ const TITLES: Record<string, string> = {
 
 export default function AppLayout() {
   const { user, signOut } = useAuth();
+  const { demo, exit } = useDemo();
   const dash = useDash();
   const loc = useLocation();
   const nav = useNavigate();
   const [scopeOpen, setScopeOpen] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
 
-  const name = (user?.user_metadata?.full_name as string) || user?.email?.split("@")[0] || "You";
+  const name = demo ? "Demo mode" : (user?.user_metadata?.full_name as string) || user?.email?.split("@")[0] || "You";
+  const email = demo ? "Sample data · not real" : user?.email;
   const title = TITLES[loc.pathname] ?? "Overview";
 
   const scopeLabel = dash.scope === "all" ? "All platforms" : PLATFORMS[dash.scope].name;
 
   return (
     <div className="shell">
-      <aside className="side">
+      {navOpen && <div className="navscrim" onClick={() => setNavOpen(false)} />}
+      <aside className={"side" + (navOpen ? " open" : "")}>
         <div className="side__top">
           <span className="brandmark">
             <span className="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h4l2.5-7 4 15 3-9 2 3h4.5" /></svg></span>
             <b>PulseBoard</b>
           </span>
+          <button className="side__close iconbtn" onClick={() => setNavOpen(false)} aria-label="Close menu"><IcClose /></button>
         </div>
         <nav className="side__nav">
           <div className="side__grouplabel">Analytics</div>
           {NAV.map(({ to, label, Icon, end }) => (
-            <NavLink key={to} to={to} end={end} className={({ isActive }) => "side__link" + (isActive ? " active" : "")}>
+            <NavLink key={to} to={to} end={end} onClick={() => setNavOpen(false)} className={({ isActive }) => "side__link" + (isActive ? " active" : "")}>
               <Icon /> {label}
             </NavLink>
           ))}
           <div className="side__grouplabel">Setup</div>
-          <NavLink to="/connections" className={({ isActive }) => "side__link" + (isActive ? " active" : "")}>
+          <NavLink to="/connections" onClick={() => setNavOpen(false)} className={({ isActive }) => "side__link" + (isActive ? " active" : "")}>
             <IcLink /> Connections
           </NavLink>
         </nav>
@@ -67,7 +73,7 @@ export default function AppLayout() {
             <span className="avatar">{initials(name)}</span>
             <span style={{ minWidth: 0, flex: 1, textAlign: "left" }}>
               <span className="nm" style={{ display: "block" }}>{name}</span>
-              <span className="em" style={{ display: "block" }}>{user?.email}</span>
+              <span className="em" style={{ display: "block" }}>{email}</span>
             </span>
             <IcChevron style={{ width: 15, height: 15, color: "var(--muted)" }} />
           </button>
@@ -75,9 +81,15 @@ export default function AppLayout() {
             <>
               <div style={{ position: "fixed", inset: 0, zIndex: 55 }} onClick={() => setAcctOpen(false)} />
               <div className="pop" style={{ bottom: 60, left: 10, right: 10 }}>
-                <button onClick={() => { setAcctOpen(false); nav("/connections"); }}><IcLink /> Connections</button>
-                <hr />
-                <button onClick={() => signOut()}><IcLogout /> Sign out</button>
+                {demo ? (
+                  <button onClick={() => { setAcctOpen(false); exit(); nav("/"); }}><IcLogout /> Exit preview</button>
+                ) : (
+                  <>
+                    <button onClick={() => { setAcctOpen(false); nav("/connections"); }}><IcLink /> Connections</button>
+                    <hr />
+                    <button onClick={() => signOut()}><IcLogout /> Sign out</button>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -86,6 +98,7 @@ export default function AppLayout() {
 
       <div className="main">
         <header className="topbar">
+          <button className="navtoggle iconbtn" onClick={() => setNavOpen(true)} aria-label="Open menu"><IcMenu /></button>
           <h1>{title}</h1>
           <button className="searchbtn" onClick={() => window.dispatchEvent(new Event("pb-open-cmdk"))} aria-label="Open command palette">
             <IcSearch /> <span className="sb-label">Search</span> <kbd>⌘K</kbd>
@@ -129,6 +142,13 @@ export default function AppLayout() {
 
         <main className="content">
           <div className="content__inner">
+            {demo && (
+              <div className="demobar">
+                <span className="chip chip--warn">Preview</span>
+                <span>You’re viewing PulseBoard with <b>sample data</b> so you can explore the interface. Numbers are illustrative.</span>
+                <button className="btn btn--sm" onClick={() => { exit(); nav("/"); }}>Exit preview</button>
+              </div>
+            )}
             <Outlet />
           </div>
         </main>

@@ -67,6 +67,12 @@ export const IcInbox = (p: SVGProps<SVGSVGElement>) => (
 export const IcClock = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
 );
+export const IcMenu = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+);
+export const IcClose = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><path d="M6 6l12 12M18 6L6 18" /></svg>
+);
 export const IcSearch = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
 );
